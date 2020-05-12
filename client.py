@@ -4,6 +4,10 @@ import pygame
 import ctypes
 import time
 import enum
+import loginpage
+import signuppage
+import mainpage
+import waitingpage
 from pynput.keyboard import Key, Controller as KeyboardController, Listener as KeyboardListener
 from pynput.mouse import Button, Controller as MouseController, Listener as MouseListener
 from zlib import compress
@@ -16,40 +20,104 @@ secondary_port = 8023
 scroll_amount = 100
 max_bytes = 65000
 
+server_ip = '127.0.0.1'
+server_port = 9000
+
 
 def main():
-    global server_ip
-    global server_port
-    server_ip = '127.0.0.1'
-    server_port = 9000
-    answer = input("client or server")
-    if answer == "c":
-        c = User(input("insert ip"))
-    elif answer == "s":
-        s = Server()
-    else:
-        print("insert again")
+    global main_client
+    global opened
+    opened = False
+    main_client = MainClient()
+    # answer = input("client or server")
+    # if answer == "c":
+    #     c = User(input("insert ip"))
+    # elif answer == "s":
+    #     s = Server()
+    # else:
+    #     print("insert again")
 
 
 class MainClient:
-    def create_server_connection(self):
-        global server_ip
-        global server_port
-        print(server_ip, server_port)
-        server_socket = socket.socket()
-        server_socket.connect((server_ip, server_port))
-        does_conn = server_socket.recv(1024).decode()
-        if does_conn == "connected":
-            answer = input("client or technician")
-            if answer == "t":
-                code = input("insert code")
-                while self.check_code(code):
-                    code
-            server_socket.send(code.encode())
+    @staticmethod
+    def close_signup_page():
+        signuppage.signuppage_support.destroy_window()
+
+    @staticmethod
+    def close_login_page():
+        loginpage.loginpage_support.destroy_window()
+
+    @staticmethod
+    def close_main_page():
+        mainpage.mainpage_support.destroy_window()
+
+    def open_signup_page(self):
+        signuppage.vp_start_gui(self)
+
+    def open_login_page(self):
+        loginpage.vp_start_gui(self)
+
+    def open_mainpage(self, code):
+        mainpage.vp_start_gui(self, code)
+
+    @staticmethod
+    def open_waiting_page():
+        waitingpage.vp_start_gui()
+
+    def sign_up(self, username, password, email):
+        self.send("signup {} {} {}".format(username, password, email))
+        response = self.server_socket.recv(1024).decode()
+        if response == "succeed":
+            self.close_signup_page()
+            self.open_login_page()
+        else:
+            user, eml = response.split(" ")
+            signuppage.failed_signup(user, eml)
+
+    def login(self, username, password):
+        print(username, password)
+        self.send("login {} {}".format(username, password))
+        answer = self.server_socket.recv(1024).decode()
+        if answer == "failed":
+            loginpage.loginpage_support.failed_login()
+        else:
+            self.close_login_page()
+            self.open_mainpage(answer)
+
+    @staticmethod
+    def get_ip():
+        hostname = socket.gethostname()
+        my_ip = socket.gethostbyname(hostname)
+        print(hostname, my_ip)
+        return my_ip
+
+    def send(self, message):
+        print(message)
+        self.server_socket.send(message.encode())
+
+    @staticmethod
+    def stop_waitingpage():
+        waitingpage.waitingpage_support.stop = True
+
+    def start_connection(self):
+        self.close_main_page()
+        self.waitingpage_thread.start()
+        if self.tech_or_user == "u":
+            self.send("ip {} {}".format(self.code, self.get_ip()))
+            server = Server()
+        else:
+            self.send("code {}".format(self.code))
+            user_ip = self.server_socket.recv(1024).decode()
+            user = User(user_ip)
 
     def __init__(self):
-        server_conn = threading.Thread(target=self.create_server_connection, args=())
-        server_conn.start()
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.connect((server_ip, server_port))
+        self.waitingpage_thread = threading.Thread(target=self.open_waiting_page, args=())
+        self.tech_or_user = "u"
+        self.code = ""
+        login_page_thread = threading.Thread(target=self.open_login_page, args=())
+        login_page_thread.start()
 
 
 class User:
@@ -176,6 +244,8 @@ class User:
             self.client_socket.close()
 
     def __init__(self, client_ip):
+        print("connecting to server")
+        MainClient.stop_waitingpage()
         user32 = ctypes.windll.user32
         user32.SetProcessDPIAware()
         self.width = -1
@@ -263,6 +333,8 @@ class Server:
                 self.mouse.release(button)
 
     def __init__(self):
+        print("server has started")
+        MainClient.stop_waitingpage()
         user32 = ctypes.windll.user32
         user32.SetProcessDPIAware()
         self.WIDTH = user32.GetSystemMetrics(0)
@@ -283,3 +355,5 @@ class Server:
 
 if __name__ == '__main__':
     main()
+
+
