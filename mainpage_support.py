@@ -53,11 +53,46 @@ def tech_button_click():
 
 def connect():
     global w, client
+    w.connbutton['state'] = 'disabled'
     if client.tech_or_user == "t":
         client.code = w.codetxt.get()
     else:
         client.code = w.selfcode['text']
     client.start_connection()
+
+
+def change_state():
+    global w
+    w.connbutton['state'] = 'normal'
+
+
+def logout():
+    global client
+    destroy_window()
+    client.re_log = False
+    client.open_login_page()
+
+
+def open_addfriend_page():
+    global client
+    client.open_addfriend_page()
+
+
+def friend_click(name):
+    global client
+    client.get_friend_code(name)
+
+
+def change_code(code):
+    global w
+    w.codetxt.delete(0, "end")
+    w.codetxt.insert(0, code)
+
+
+def on_closing():
+    global client
+    destroy_window()
+    client.on_closing()
 
 
 if __name__ == '__main__':

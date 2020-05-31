@@ -22,12 +22,15 @@ except ImportError:
     import tkinter.ttk as ttk
     py3 = True
 
+import time
 
-def init(top, gui, *args, **kwargs):
-    global w, top_level, root, stop
+
+def init(top, gui, main_client, *args, **kwargs):
+    global w, top_level, root, stop, client
     w = gui
     top_level = top
     root = top
+    client = main_client
     waiting_thread = threading.Thread(target=change_text, args=())
     waiting_thread.start()
 
@@ -37,6 +40,12 @@ def destroy_window():
     global top_level
     top_level.destroy()
     top_level = None
+
+
+def cancel():
+    global stop, client
+    stop = True
+    client.wait_close()
 
 
 def change_text():

@@ -6,6 +6,7 @@
 #    Mar 31, 2020 04:17:45 PM +0300  platform: Windows NT
 
 import sys
+from tkinter import messagebox
 
 try:
     import Tkinter as tk
@@ -14,21 +15,27 @@ except ImportError:
 
 try:
     import ttk
+
     py3 = False
 except ImportError:
     import tkinter.ttk as ttk
+
     py3 = True
 
 import mainpage_support
 
 
-def vp_start_gui(main_client, user_code):
-    '''Starting point when module is the main routine.'''
-    global val, w, root, code
-    code = user_code
+def vp_start_gui(main_client, data):
+    """Starting point when module is the main routine."""
+    global val, w, root, code, friend_list, conns_list
+    code, friend_list, conns_list = data.split(" ")
+    friend_list = friend_list.split(",")
+    conns_list = conns_list.split(",")
+    conns_list.reverse()
     root = tk.Tk()
-    top = RemoteTechnicianPage (root)
+    top = RemoteTechnicianPage(root)
     mainpage_support.init(root, top, main_client)
+    root.protocol("WM_DELETE_WINDOW", mainpage_support.on_closing)
     root.mainloop()
 
 
@@ -36,15 +43,15 @@ w = None
 
 
 def create_RemoteTechnicianPage(rt, *args, **kwargs):
-    '''Starting point when module is imported by another module.
-       Correct form of call: 'create_RemoteTechnicianPage(root, *args, **kwargs)' .'''
+    """Starting point when module is imported by another module.
+       Correct form of call: 'create_RemoteTechnicianPage(root, *args, **kwargs)' ."""
     global w, w_win, root
-    #rt = root
+    # rt = root
     root = rt
-    w = tk.Toplevel (root)
-    top = RemoteTechnicianPage (w)
+    w = tk.Toplevel(root)
+    top = RemoteTechnicianPage(w)
     mainpage_support.init(w, top, *args, **kwargs)
-    return (w, top)
+    return w, top
 
 
 def destroy_RemoteTechnicianPage():
@@ -62,25 +69,55 @@ def tech_button_click():
 
 
 class RemoteTechnicianPage:
+    def check(self):
+        if self.codetxt.index("end") == 0 and self.codetxt['state'] != 'disabled':
+            self.codetxt.configure(background="#FF8080")
+            return False
+        self.codetxt.configure(background="white")
+        return True
+
+    def connect(self):
+        if self.check():
+            mainpage_support.connect()
+
+    def insert_friend_list(self):
+        global friend_list
+        self.friendslist.delete(0, "end")
+        for friend in friend_list:
+            self.friendslist.insert("end", friend)
+
+    def insert_conns_list(self):
+        global conns_list
+        self.lastconnlist.delete(0, "end")
+        for conn in conns_list:
+            self.lastconnlist.insert("end", conn)
+
+    def friend_click(self, x=None):
+        friend_name = str(self.friendslist.get(self.friendslist.curselection()))
+        mainpage_support.friend_click(friend_name)
+
+    def conn_click(self, x=None):
+        conn_name = str(self.lastconnlist.get(self.lastconnlist.curselection()))
+        mainpage_support.friend_click(conn_name)
+
     def __init__(self, top=None):
         global code
         '''This class configures and populates the toplevel window.
            top is the toplevel containing window.'''
         _bgcolor = '#d9d9d9'  # X11 color: 'gray85'
         _fgcolor = '#000000'  # X11 color: 'black'
-        _compcolor = '#d9d9d9' # X11 color: 'gray85'
-        _ana1color = '#d9d9d9' # X11 color: 'gray85'
-        _ana2color = '#ececec' # Closest X11 color: 'gray92'
+        _compcolor = '#d9d9d9'  # X11 color: 'gray85'
+        _ana1color = '#d9d9d9'  # X11 color: 'gray85'
+        _ana2color = '#ececec'  # Closest X11 color: 'gray92'
         font10 = "-family {Arial Black} -size 12 -weight bold"
         font9 = "-family {Arial Rounded MT Bold} -size 20"
         self.style = ttk.Style()
         if sys.platform == "win32":
             self.style.theme_use('winnative')
-        self.style.configure('.',background=_bgcolor)
-        self.style.configure('.',foreground=_fgcolor)
-        self.style.configure('.',font="TkDefaultFont")
-        self.style.map('.',background=
-            [('selected', _compcolor), ('active',_ana2color)])
+        self.style.configure('.', background=_bgcolor)
+        self.style.configure('.', foreground=_fgcolor)
+        self.style.configure('.', font="TkDefaultFont")
+        self.style.map('.', background=[('selected', _compcolor), ('active', _ana2color)])
 
         top.geometry("611x441+352+149")
         top.minsize(120, 1)
@@ -150,14 +187,16 @@ class RemoteTechnicianPage:
         self.lastconnlist.configure(highlightcolor="black")
         self.lastconnlist.configure(selectbackground="#c4c4c4")
         self.lastconnlist.configure(selectforeground="black")
+        self.lastconnlist.configure(exportselection=False)
+        self.lastconnlist.bind('<<ListboxSelect>>', self.conn_click)
+        self.insert_conns_list()
 
         self.TSeparator1 = ttk.Separator(top)
         self.TSeparator1.place(relx=0.491, rely=0.204, relheight=0.29)
         self.TSeparator1.configure(orient="vertical")
 
         self.Labelframe2 = tk.LabelFrame(top)
-        self.Labelframe2.place(relx=0.622, rely=0.512, relheight=0.456
-                               , relwidth=0.283)
+        self.Labelframe2.place(relx=0.622, rely=0.512, relheight=0.456, relwidth=0.283)
         self.Labelframe2.configure(relief='groove')
         self.Labelframe2.configure(foreground="black")
         self.Labelframe2.configure(text='''friends''')
@@ -166,8 +205,7 @@ class RemoteTechnicianPage:
         self.Labelframe2.configure(highlightcolor="black")
 
         self.friendslist = ScrolledListBox(self.Labelframe2)
-        self.friendslist.place(relx=0.069, rely=0.144, relheight=0.756
-                               , relwidth=0.873, bordermode='ignore')
+        self.friendslist.place(relx=0.069, rely=0.144, relheight=0.756, relwidth=0.873, bordermode='ignore')
         self.friendslist.configure(background="white")
         self.friendslist.configure(cursor="xterm")
         self.friendslist.configure(disabledforeground="#a3a3a3")
@@ -177,6 +215,9 @@ class RemoteTechnicianPage:
         self.friendslist.configure(highlightcolor="#d9d9d9")
         self.friendslist.configure(selectbackground="#c4c4c4")
         self.friendslist.configure(selectforeground="black")
+        self.friendslist.configure(exportselection=False)
+        self.friendslist.bind('<<ListboxSelect>>', self.friend_click)
+        self.insert_friend_list()
 
         self.Labelframe3 = tk.LabelFrame(top)
         self.Labelframe3.place(relx=0.524, rely=0.34, relheight=0.136
@@ -215,7 +256,7 @@ class RemoteTechnicianPage:
         self.connbutton.configure(highlightcolor="black")
         self.connbutton.configure(pady="0")
         self.connbutton.configure(text='''CONNECT''')
-        self.connbutton.configure(command=mainpage_support.connect)
+        self.connbutton.configure(command=self.connect)
 
         self.Labelframe4 = tk.LabelFrame(top)
         self.Labelframe4.place(relx=0.213, rely=0.34, relheight=0.136
@@ -237,10 +278,41 @@ class RemoteTechnicianPage:
         self.selfcode.configure(foreground="#487efd")
         self.selfcode.configure(text=code)
 
+        self.Logoutbutton = tk.Button(top)
+        self.Logoutbutton.place(relx=0.0, rely=0.0, height=44, width=97)
+        self.Logoutbutton.configure(activebackground="#ececec")
+        self.Logoutbutton.configure(activeforeground="#000000")
+        self.Logoutbutton.configure(background="#00a6ff")
+        self.Logoutbutton.configure(disabledforeground="#a3a3a3")
+        self.Logoutbutton.configure(cursor="hand2")
+        self.Logoutbutton.configure(font=font10)
+        self.Logoutbutton.configure(foreground="#000000")
+        self.Logoutbutton.configure(highlightbackground="#d9d9d9")
+        self.Logoutbutton.configure(highlightcolor="#000000")
+        self.Logoutbutton.configure(pady="0")
+        self.Logoutbutton.configure(text='''Logout''')
+        self.Logoutbutton.configure(command=mainpage_support.logout)
+
+        self.friendbutton = tk.Button(top)
+        self.friendbutton.place(relx=0.0, rely=0.091, height=44, width=97)
+        self.friendbutton.configure(activebackground="#ececec")
+        self.friendbutton.configure(activeforeground="#000000")
+        self.friendbutton.configure(background="#00a6ff")
+        self.friendbutton.configure(cursor="hand2")
+        self.friendbutton.configure(disabledforeground="#a3a3a3")
+        self.friendbutton.configure(font="-family {Arial Black} -size 12 -weight bold")
+        self.friendbutton.configure(foreground="#000000")
+        self.friendbutton.configure(highlightbackground="#d9d9d9")
+        self.friendbutton.configure(highlightcolor="#000000")
+        self.friendbutton.configure(pady="0")
+        self.friendbutton.configure(text='''Add friend''')
+        self.friendbutton.configure(command=mainpage_support.open_addfriend_page)
+
 
 # The following code is added to facilitate the Scrolled widgets you specified.
 class AutoScroll(object):
     '''Configure the scrollbars for a widget.'''
+
     def __init__(self, master):
         #  Rozen. Added the try-except clauses so that this class
         #  could be used for scrolled entry widget for which vertical
@@ -266,10 +338,10 @@ class AutoScroll(object):
         # Copy geometry methods of master  (taken from ScrolledText.py)
         if py3:
             methods = tk.Pack.__dict__.keys() | tk.Grid.__dict__.keys() \
-                  | tk.Place.__dict__.keys()
+                      | tk.Place.__dict__.keys()
         else:
             methods = tk.Pack.__dict__.keys() + tk.Grid.__dict__.keys() \
-                  + tk.Place.__dict__.keys()
+                      + tk.Place.__dict__.keys()
         for meth in methods:
             if meth[0] != '_' and meth not in ('config', 'configure'):
                 setattr(self, meth, getattr(master, meth))
@@ -277,6 +349,7 @@ class AutoScroll(object):
     @staticmethod
     def _autoscroll(sbar):
         '''Hide and show scrollbar as needed.'''
+
         def wrapped(first, last):
             first, last = float(first), float(last)
             if first <= 0 and last >= 1:
@@ -284,6 +357,7 @@ class AutoScroll(object):
             else:
                 sbar.grid()
             sbar.set(first, last)
+
         return wrapped
 
     def __str__(self):
@@ -293,17 +367,20 @@ class AutoScroll(object):
 def _create_container(func):
     '''Creates a ttk Frame with a given master, and use this new frame to
     place the scrollbars and the widget.'''
+
     def wrapped(cls, master, **kw):
         container = ttk.Frame(master)
         container.bind('<Enter>', lambda e: _bound_to_mousewheel(e, container))
         container.bind('<Leave>', lambda e: _unbound_to_mousewheel(e, container))
         return func(cls, container, **kw)
+
     return wrapped
 
 
 class ScrolledListBox(AutoScroll, tk.Listbox):
     '''A standard Tkinter Listbox widget with scrollbars that will
     automatically show/hide as needed.'''
+
     @_create_container
     def __init__(self, master, **kw):
         tk.Listbox.__init__(self, master, **kw)
@@ -342,9 +419,9 @@ def _unbound_to_mousewheel(event, widget):
 
 def _on_mousewheel(event, widget):
     if platform.system() == 'Windows':
-        widget.yview_scroll(-1*int(event.delta/120),'units')
+        widget.yview_scroll(-1 * int(event.delta / 120), 'units')
     elif platform.system() == 'Darwin':
-        widget.yview_scroll(-1*int(event.delta),'units')
+        widget.yview_scroll(-1 * int(event.delta), 'units')
     else:
         if event.num == 4:
             widget.yview_scroll(-1, 'units')
@@ -354,9 +431,9 @@ def _on_mousewheel(event, widget):
 
 def _on_shiftmouse(event, widget):
     if platform.system() == 'Windows':
-        widget.xview_scroll(-1*int(event.delta/120), 'units')
+        widget.xview_scroll(-1 * int(event.delta / 120), 'units')
     elif platform.system() == 'Darwin':
-        widget.xview_scroll(-1*int(event.delta), 'units')
+        widget.xview_scroll(-1 * int(event.delta), 'units')
     else:
         if event.num == 4:
             widget.xview_scroll(-1, 'units')

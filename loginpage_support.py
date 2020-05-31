@@ -52,6 +52,12 @@ def failed_login():
     w.show_alert()
 
 
+def on_closing():
+    global client
+    destroy_window()
+    client.on_closing()
+
+
 if __name__ == '__main__':
     import loginpage
     loginpage.vp_start_gui()

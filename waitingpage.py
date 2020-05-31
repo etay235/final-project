@@ -22,12 +22,12 @@ except ImportError:
 import waitingpage_support
 
 
-def vp_start_gui():
+def vp_start_gui(main_client):
     """Starting point when module is the main routine."""
     global val, w, root
     root = tk.Tk()
     top = Toplevel1(root)
-    waitingpage_support.init(root, top)
+    waitingpage_support.init(root, top, main_client)
     root.mainloop()
 
 
@@ -61,6 +61,7 @@ class Toplevel1:
         _compcolor = '#d9d9d9'  # X11 color: 'gray85'
         _ana1color = '#d9d9d9'  # X11 color: 'gray85'
         _ana2color = '#ececec'  # Closest X11 color: 'gray92'
+        font9 = "-family {Arial Black} -size 9 -weight bold"
 
         top.geometry("230x100+486+244")
         top.minsize(120, 1)
@@ -86,3 +87,18 @@ class Toplevel1:
         self.waiting_label.configure(highlightbackground="#d9d9d9")
         self.waiting_label.configure(highlightcolor="black")
         self.waiting_label.configure(text='''Waiting.''')
+
+        self.cancelbutton = tk.Button(top)
+        self.cancelbutton.place(relx=0.605, rely=0.584, height=34, width=67)
+        self.cancelbutton.configure(activebackground="#ececec")
+        self.cancelbutton.configure(activeforeground="#000000")
+        self.cancelbutton.configure(background="#00a6ff")
+        self.cancelbutton.configure(disabledforeground="#a3a3a3")
+        self.cancelbutton.configure(font=font9)
+        self.cancelbutton.configure(cursor="hand2")
+        self.cancelbutton.configure(foreground="#000000")
+        self.cancelbutton.configure(highlightbackground="#d9d9d9")
+        self.cancelbutton.configure(highlightcolor="black")
+        self.cancelbutton.configure(pady="0")
+        self.cancelbutton.configure(text='''Cancel''')
+        self.cancelbutton.configure(command=waitingpage_support.cancel)

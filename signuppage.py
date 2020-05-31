@@ -31,6 +31,7 @@ def vp_start_gui(main_client):
     root = tk.Tk()
     top = signuppage(root)
     signuppage_support.init(root, top, main_client)
+    root.protocol("WM_DELETE_WINDOW", signuppage_support.on_closing)
     root.mainloop()
 
 
